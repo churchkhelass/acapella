@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Withdraw App
 
-## Getting Started
+Приложение для вывода средств с защитой от двойного сабмита, идемпотентностью и восстановлением состояния после перезагрузки.
 
-First, run the development server:
+## Запуск проекта
 
 ```bash
+# Установка зависимостей
+npm install
+
+# Запуск в режиме разработки
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# Сборка для production
+npm run build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Запуск production сборки
+npm start
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Запуск тестов
+npm test
 
-## Learn More
+# Запуск тестов в watch режиме
+npm run test:watch
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---------------------------------------------
+## Хранение токена
+---------------------------------------------
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+JWT токен должен храниться в httpOnly cookie
+CSRF токен для дополнительной защиты
+Refresh token механизм для обновления сессий
 
-## Deploy on Vercel
+---------------------------------------------
+## Структура проекта
+---------------------------------------------
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+src/
+├── app/              # Next.js App Router страницы
+├── components/       # React компоненты
+│   ├── ui/          # Переиспользуемые UI компоненты
+│   └── *.tsx        # Бизнес-компоненты
+├── lib/              # Бизнес-логика
+│   ├── api/         # API клиенты
+│   ├── store/       # Zustand store
+│   └── utils/       # Утилиты
+├── types/            # TypeScript типы
+__tests__/            # Тесты
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---------------------------------------------
+## Технологии
+---------------------------------------------
+
+Next.js 14 (App Router)
+TypeScript
+Zustand (state management)
+TailwindCSS (стилизация)
+Jest + React Testing Library (тесты)
+
+---------------------------------------------
+## Производительность
+---------------------------------------------
+
+Мемоизация компонентов (React.memo)
+Оптимизированные селекторы Zustand
+Ленивая загрузка где необходимо
+Предотвращение лишних ререндеров
+
+---------------------------------------------
+## State Management (Zustand)
+---------------------------------------------
+
+Использован Zustand вместо Redux для простоты и производительности
+Persist middleware для сохранения последней заявки в localStorage
+Автоматическое восстановление состояния при перезагрузке (до 5 минут)
+Мемоизированные селекторы для оптимизации рендеров
+
+---------------------------------------------
+## 2. API слой
+---------------------------------------------
+Реализован retry механизм с экспоненциальной задержкой (3 попытки)
+Idempotency ключи для защиты от дублирования транзакций
+Обработка специфических ошибок (409 Conflict)
+Типизированные ответы и ошибки
+
+---------------------------------------------
+## 3. Безопасность
+---------------------------------------------
+Access token не хранится в localStorage
+Для production: токены должны храниться в httpOnly cookies
+Санитизация пользовательского ввода
+Защита от XSS через React (автоматическое экранирование)
+
+---------------------------------------------
+## 4. UI/UX
+---------------------------------------------
+
+Валидация на уровне формы с подсветкой ошибок
+Debounced валидация для производительности
+Состояния idle/loading/success/error
+Защита от двойного сабмита на уровне UI и API
+
+---------------------------------------------
+## Тестирование
+---------------------------------------------
+
+Проект покрыт unit-тестами:
+Happy path submit
+Обработка ошибок API
+Защита от двойного submit
+Валидация формы
+
+---------------------------------------------
+
+
+
+⣿⣿⣿⣿⣿⣿⣿⡿⠛⠉⠉⠉⠉⠛⠻⣿⣿⠿⠛⠛⠙⠛⠻⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⠟⠁⠀⠀⠀⢀⣀⣀⡀⠀⠈⢄⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿
+⣿⣿⣿⣿⠏⠀⠀⠀⠔⠉⠁⠀⠀⠈⠉⠓⢼⡤⠔⠒⠀⠐⠒⠢⠌⠿⣿⣿
+⣿⣿⣿⡏⠀⠀⠀⠀⠀⠀⢀⠤⣒⠶⠤⠭⠭⢝⡢⣄⢤⣄⣒⡶⠶⣶⣢⡝
+⡿⠋⠁⠀⠀⠀⠀⣀⠲⠮⢕⣽⠖⢩⠉⠙⣷⣶⣮⡍⢉⣴⠆⣭⢉⠑⣶⣿
+⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠻⣿⣄⠤⠘⢃⣿⣿⡿⠫⣿⣿⣄⠤⠘⢃⣿⣿
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠓⠤⠭⣥⣀⣉⡩⡥⠴⠃⠀⠈⠉⠁⠈⠉⠁⣴
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠔⠊⠀⠀⠀⠓⠲⡤⠤⠖⠐⢿⣿
+⠀⠀⠀⠀⠀⠀⠀⠀⣠⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻
+⠀⠀⠀⠀⠀⠀⠀⢸⣿⡻⢷⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣘
+⠀⠀⠀⠀⠀⠠⡀⠀⠙⢿⣷⣽⣽⣛⣟⣻⠷⠶⢶⣦⣤⣤⣤⣤⣶⠾⣿⣿
+⠀⠀⠀⠀⠀⠀⠉⠂⠀⠀⠀⠈⠉⠙⠛⠻⠿⠿⠿⠿⠶⠶⠶⠶⠾⣿⣿⣿
