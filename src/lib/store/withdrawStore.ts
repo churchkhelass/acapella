@@ -4,20 +4,23 @@ import { Withdrawal, RequestState, ApiError } from '@/types/withdraw';
 import { withdrawalsApi } from '../api/withdrawals';
 
 interface WithdrawState {
-  // State
   currentWithdrawal: Withdrawal | null;
   requestState: RequestState;
   error: ApiError | null;
   lastUpdated: number | null;
+  isPolling: boolean;
+  pollInterval: number | null;
 
-  // Actions
   createWithdrawal: (amount: number, destination: string) => Promise<void>;
   fetchWithdrawal: (id: string) => Promise<void>;
+  startPolling: (id: string) => void;
+  stopPolling: () => void;
   reset: () => void;
   clearError: () => void;
 }
 
 const EXPIRATION_TIME = 5 * 60 * 1000; // 5 минут
+const POLL_INTERVAL = 3000; // 3 секунды
 
 export const useWithdrawStore = create<WithdrawState>()(
   persist(
@@ -26,6 +29,8 @@ export const useWithdrawStore = create<WithdrawState>()(
       requestState: 'idle',
       error: null,
       lastUpdated: null,
+      isPolling: false,
+      pollInterval: null,
 
       createWithdrawal: async (amount: number, destination: string) => {
         set({ requestState: 'loading', error: null });
@@ -37,6 +42,9 @@ export const useWithdrawStore = create<WithdrawState>()(
             requestState: 'success',
             lastUpdated: Date.now(),
           });
+          
+          // Автоматически запускаем polling для новой заявки
+          get().startPolling(withdrawal.id);
         } catch (error) {
           set({
             requestState: 'error',
@@ -48,26 +56,55 @@ export const useWithdrawStore = create<WithdrawState>()(
       },
 
       fetchWithdrawal: async (id: string) => {
-        set({ requestState: 'loading', error: null });
-
         try {
           const withdrawal = await withdrawalsApi.getById(id);
-          set({
-            currentWithdrawal: withdrawal,
-            requestState: 'success',
-            lastUpdated: Date.now(),
-          });
+          const currentWithdrawal = get().currentWithdrawal;
+          
+          // Проверяем, изменился ли статус
+          if (currentWithdrawal?.status !== withdrawal.status) {
+            set({
+              currentWithdrawal: withdrawal,
+              lastUpdated: Date.now(),
+            });
+          }
         } catch (error) {
-          set({
-            requestState: 'error',
-            error: {
-              message: error instanceof Error ? error.message : 'Ошибка при получении заявки',
-            },
-          });
+          console.error('Polling error:', error);
         }
       },
 
+      startPolling: (id: string) => {
+        // Останавливаем предыдущий polling если был
+        get().stopPolling();
+
+        // Запускаем новый polling
+        const intervalId = window.setInterval(() => {
+          get().fetchWithdrawal(id);
+        }, POLL_INTERVAL);
+
+        set({ 
+          isPolling: true, 
+          pollInterval: intervalId 
+        });
+
+        console.log(`[Polling] Started for withdrawal ${id}`);
+      },
+
+      stopPolling: () => {
+        const { pollInterval } = get();
+        
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          console.log('[Polling] Stopped');
+        }
+
+        set({ 
+          isPolling: false, 
+          pollInterval: null 
+        });
+      },
+
       reset: () => {
+        get().stopPolling();
         set({
           currentWithdrawal: null,
           requestState: 'idle',
@@ -90,7 +127,7 @@ export const useWithdrawStore = create<WithdrawState>()(
   )
 );
 
-// Селекторы для проверки актуальности данных
+// Селектор с проверкой актуальности
 export const useLastWithdrawal = () => {
   const { currentWithdrawal, lastUpdated } = useWithdrawStore();
   
@@ -102,3 +139,11 @@ export const useLastWithdrawal = () => {
   
   return isExpired ? null : currentWithdrawal;
 };
+
+// Очистка при демонтировании (для SSR)
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    const state = useWithdrawStore.getState();
+    state.stopPolling();
+  });
+}

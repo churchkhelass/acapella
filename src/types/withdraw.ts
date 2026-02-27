@@ -25,4 +25,11 @@ export interface ApiError {
   status?: number;
 }
 
+export interface WithdrawalProgress {
+  current: number;
+  total: number;
+  message?: string;
+}
+
+
 export type RequestState = 'idle' | 'loading' | 'success' | 'error';
